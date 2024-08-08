@@ -1,4 +1,4 @@
-name: Build and deploy .NET Core app to Azure Function App - silicon-account-provider
+name: Build and deploy .NET Core app to Azure Function App - backendfunctionang
 
 on:
   push:
@@ -35,6 +35,6 @@ jobs:
       - name: 'Deploy to Azure Functions'
         uses: Azure/functions-action@v1
         with:
-          app-name: 'silicon-account-provider'
-          package: './output'
-          publish-profile: ${{ secrets.AZURE_FUNCTIONS_PUBLISH_PROFILE }}
+          app-name: 'backendfunctionang' # Updated to match your Function App name
+          package: './output' # Path to the published output
+          publish-profile: ${{ secrets.AZURE_FUNCTIONS_PUBLISH_PROFILE }} # Ensure this secret is correctly set
