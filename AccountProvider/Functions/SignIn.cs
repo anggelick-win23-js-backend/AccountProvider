@@ -20,11 +20,14 @@ namespace AccountProvider.Functions
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public SignIn(ILogger<SignIn> logger, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> singInManager)
+        public SignIn(
+            ILogger<SignIn> logger,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager)
         {
             _logger = logger;
             _userManager = userManager;
-            _signInManager = singInManager;
+            _signInManager = signInManager;
         }
 
         [Function("SignIn")]
@@ -34,79 +37,78 @@ namespace AccountProvider.Functions
 
             try
             {
+                // Read and deserialize the request body
                 var body = await new StreamReader(req.Body).ReadToEndAsync();
                 var signInRequest = JsonConvert.DeserializeObject<UserSignInRequest>(body);
 
-                if (signInRequest != null && !string.IsNullOrEmpty(signInRequest.Email) && !string.IsNullOrEmpty(signInRequest.Password))
+                if (signInRequest == null || string.IsNullOrEmpty(signInRequest.Email) || string.IsNullOrEmpty(signInRequest.Password))
                 {
-                    var user = await _userManager.FindByEmailAsync(signInRequest.Email);
+                    _logger.LogError("Invalid sign-in request: Missing email or password.");
+                    return new BadRequestResult();
+                }
 
-                    if (user == null)
-                    {
-                        _logger.LogError("User not found.");
-                        return new UnauthorizedResult();
-                    }
+                // Find the user by email
+                var user = await _userManager.FindByEmailAsync(signInRequest.Email);
+                if (user == null)
+                {
+                    _logger.LogWarning("Sign-in attempt failed: User not found.");
+                    return new UnauthorizedResult();
+                }
 
-                    var result = await _signInManager.CheckPasswordSignInAsync(user, signInRequest.Password, false);
-
-                    if (result.Succeeded)
-                    {
-                        _logger.LogInformation("User signed in successfully.");
-                        var token = GenerateJwtToken(user);
-                        return new OkObjectResult(token);
-                    }
-                    else
-                    {
-                        _logger.LogError("Failed to sign in user.");
-                        return new UnauthorizedResult();
-                    }
+                // Check the password
+                var result = await _signInManager.CheckPasswordSignInAsync(user, signInRequest.Password, false);
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation("User signed in successfully.");
+                    var token = GenerateJwtToken(user);
+                    return new OkObjectResult(token);
                 }
                 else
                 {
-                    _logger.LogError("Invalid sign-in request.");
-                    return new BadRequestResult();
+                    _logger.LogWarning("Sign-in attempt failed: Incorrect password.");
+                    return new UnauthorizedResult();
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError($"An error occurred while processing sign-in request: {ex.Message}");
+                _logger.LogError($"An error occurred while processing the sign-in request: {ex.Message}");
                 return new StatusCodeResult(StatusCodes.Status500InternalServerError);
             }
         }
 
-        public string GenerateJwtToken(ApplicationUser user)
+        private string GenerateJwtToken(ApplicationUser user)
         {
-            if (user != null)
+            if (user == null)
             {
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var jwtSecret = Environment.GetEnvironmentVariable("JwtSecret");
-
-                if (string.IsNullOrEmpty(jwtSecret))
-                {
-                    _logger.LogError("JwtSecret environment variable is not set.");
-                    throw new InvalidOperationException("JwtSecret environment variable is not set.");
-                }
-
-                var key = Encoding.UTF8.GetBytes(jwtSecret);
-
-                var tokenDescriptor = new SecurityTokenDescriptor
-                {
-                    Subject = new ClaimsIdentity(new Claim[]
-                    {
-                        new(ClaimTypes.Email, user.Email!),
-                        new(ClaimTypes.Name, user.Email!),
-                    }),
-                    Expires = DateTime.Now.AddDays(2),
-                    SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
-                    Issuer = "SiliconAccountProvider",
-                    Audience = "SiliconWebApplication"
-                };
-
-                var token = tokenHandler.CreateToken(tokenDescriptor);
-                return tokenHandler.WriteToken(token);
+                throw new ArgumentNullException(nameof(user), "User cannot be null when generating a JWT token.");
             }
 
-            throw new ArgumentNullException(nameof(user), "User cannot be null when generating a JWT token.");
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var jwtSecret = Environment.GetEnvironmentVariable("JwtSecret");
+
+            if (string.IsNullOrEmpty(jwtSecret))
+            {
+                _logger.LogError("JwtSecret environment variable is not set.");
+                throw new InvalidOperationException("JwtSecret environment variable is not set.");
+            }
+
+            var key = Encoding.UTF8.GetBytes(jwtSecret);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.Name, user.Email),
+                }),
+                Expires = DateTime.UtcNow.AddDays(2),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+                Issuer = "SiliconAccountProvider",
+                Audience = "SiliconWebApplication"
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
         }
     }
 }
