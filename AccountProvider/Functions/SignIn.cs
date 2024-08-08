@@ -98,8 +98,8 @@ namespace AccountProvider.Functions
             {
                 Subject = new ClaimsIdentity(new[]
                 {
-                    new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.Name, user.Email),
+                    new Claim(ClaimTypes.Email, user.Email ?? string.Empty),  // Ensure non-null value
+                    new Claim(ClaimTypes.Name, user.Email ?? string.Empty)   // Ensure non-null value
                 }),
                 Expires = DateTime.UtcNow.AddDays(2),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
