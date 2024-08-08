@@ -40,12 +40,18 @@ namespace AccountProvider.Functions
                 if (signInRequest != null && !string.IsNullOrEmpty(signInRequest.Email) && !string.IsNullOrEmpty(signInRequest.Password))
                 {
                     var user = await _userManager.FindByEmailAsync(signInRequest.Email);
+
+                    if (user == null)
+                    {
+                        _logger.LogError("User not found.");
+                        return new UnauthorizedResult();
+                    }
+
                     var result = await _signInManager.CheckPasswordSignInAsync(user, signInRequest.Password, false);
 
                     if (result.Succeeded)
                     {
                         _logger.LogInformation("User signed in successfully.");
-
                         var token = GenerateJwtToken(user);
                         return new OkObjectResult(token);
                     }
@@ -73,7 +79,15 @@ namespace AccountProvider.Functions
             if (user != null)
             {
                 var tokenHandler = new JwtSecurityTokenHandler();
-                var key = Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JwtSecret"));
+                var jwtSecret = Environment.GetEnvironmentVariable("JwtSecret");
+
+                if (string.IsNullOrEmpty(jwtSecret))
+                {
+                    _logger.LogError("JwtSecret environment variable is not set.");
+                    throw new InvalidOperationException("JwtSecret environment variable is not set.");
+                }
+
+                var key = Encoding.UTF8.GetBytes(jwtSecret);
 
                 var tokenDescriptor = new SecurityTokenDescriptor
                 {
@@ -89,11 +103,10 @@ namespace AccountProvider.Functions
                 };
 
                 var token = tokenHandler.CreateToken(tokenDescriptor);
-                var tokenString = tokenHandler.WriteToken(token);
-
-                return tokenString;
+                return tokenHandler.WriteToken(token);
             }
-            return null!;
+
+            throw new ArgumentNullException(nameof(user), "User cannot be null when generating a JWT token.");
         }
     }
 }
