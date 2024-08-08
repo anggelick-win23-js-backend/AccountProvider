@@ -1,7 +1,10 @@
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 
 namespace AccountProvider
 {
@@ -14,12 +17,25 @@ namespace AccountProvider
             _logger = logger;
         }
 
-        [Function(nameof(Function))]
-        public async Task Run([BlobInput("samples-workitems/{name}", Connection = "anggelick354storage")] Stream stream, string name)
+        [Function("ProcessBlobViaHttpTrigger")]
+        public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequestData req)
         {
-            using var blobStreamReader = new StreamReader(stream);
-            var content = await blobStreamReader.ReadToEndAsync();
-            _logger.LogInformation($"C# Blob input function processed blob\n Name: {name} \n Data: {content}");
+            string blobName = "samples-workitems/sample.txt";  // Example blob name
+            string connectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
+
+            var blobClient = new BlobClient(connectionString, "samples-workitems", blobName);
+
+            BlobDownloadInfo download = await blobClient.DownloadAsync();
+
+            using (var reader = new StreamReader(download.Content))
+            {
+                string content = await reader.ReadToEndAsync();
+                _logger.LogInformation($"Blob content: {content}");
+            }
+
+            var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
+            response.WriteString($"Blob content: {content}");
+            return response;
         }
     }
 }
