@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="microsoft.aspnetcore.identity.entityframeworkcore" Version="8.0.4" />
     <PackageReference Include="microsoft.aspnetcore.identity.ui" Version="8.0.4" />
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="5.3.1" />
     <PackageReference Include="microsoft.entityframeworkcore.design" Version="8.0.4">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

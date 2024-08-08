@@ -1,11 +1,12 @@
 {
   "dependencies": {
-    "appInsights1": {
-      "type": "appInsights"
-    },
     "storage1": {
       "type": "storage",
-      "connectionId": "AzureWebJobsStorage"
+      "connectionId": "anggelick354storage"
+    },
+    "appInsights1": {
+      "type": "appInsights",
+      "connectionId": null
     }
   }
 }
