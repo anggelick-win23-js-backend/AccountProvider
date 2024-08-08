@@ -102,7 +102,7 @@ namespace AccountProvider.Functions
                     new Claim(ClaimTypes.Name, user.Email ?? string.Empty)   // Ensure non-null value
                 }),
                 Expires = DateTime.UtcNow.AddDays(2),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.AngOlsSignature),
                 Issuer = "SiliconAccountProvider",
                 Audience = "SiliconWebApplication"
             };

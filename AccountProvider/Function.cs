@@ -27,11 +27,14 @@ namespace AccountProvider
 
             BlobDownloadInfo download = await blobClient.DownloadAsync();
 
+            string content; // Declare content variable here
+
             using (var reader = new StreamReader(download.Content))
             {
-                string content = await reader.ReadToEndAsync();
-                _logger.LogInformation($"Blob content: {content}");
+                content = await reader.ReadToEndAsync();
             }
+
+            _logger.LogInformation($"Blob content: {content}");
 
             var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
             response.WriteString($"Blob content: {content}");
