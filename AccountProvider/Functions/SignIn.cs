@@ -37,7 +37,6 @@ namespace AccountProvider.Functions
 
             try
             {
-                // Read and deserialize the request body
                 var body = await new StreamReader(req.Body).ReadToEndAsync();
                 var signInRequest = JsonConvert.DeserializeObject<UserSignInRequest>(body);
 
@@ -47,7 +46,6 @@ namespace AccountProvider.Functions
                     return new BadRequestResult();
                 }
 
-                // Find the user by email
                 var user = await _userManager.FindByEmailAsync(signInRequest.Email);
                 if (user == null)
                 {
@@ -55,7 +53,6 @@ namespace AccountProvider.Functions
                     return new UnauthorizedResult();
                 }
 
-                // Check the password
                 var result = await _signInManager.CheckPasswordSignInAsync(user, signInRequest.Password, false);
                 if (result.Succeeded)
                 {
@@ -98,11 +95,11 @@ namespace AccountProvider.Functions
             {
                 Subject = new ClaimsIdentity(new[]
                 {
-                    new Claim(ClaimTypes.Email, user.Email ?? string.Empty),  // Ensure non-null value
-                    new Claim(ClaimTypes.Name, user.Email ?? string.Empty)   // Ensure non-null value
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.Name, user.Email),
                 }),
                 Expires = DateTime.UtcNow.AddDays(2),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.AngOlsSignature),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature), // Fixed typo here
                 Issuer = "SiliconAccountProvider",
                 Audience = "SiliconWebApplication"
             };
